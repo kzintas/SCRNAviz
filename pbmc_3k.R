@@ -55,15 +55,25 @@ levels<-data.frame(pbmc$RNA_snn_res.0.4,pbmc$RNA_snn_res.0.5)
 graph_df<-as_long_data_frame(graph)
 nrow(graph_df)
 
-for (i in 1:nrow(graph_df)){
+#core_df<- data.frame()
+#extract rows with false core
+core_df <- subset(graph_df[c("from_node","to_node", "is_core")], is_core == FALSE)
+core_df <-core_df[order(core_df$to_node, decreasing=TRUE), ]
+pbmc$seurat_clusters
+
+#core_df<-core_df[order(to)]
+#for (i in 1:nrow(graph_df)){
   
-  print(graph_df[i,"RNA_snn_res"])
-}
+#  if(graph_df[i,"is_core"]== FALSE)
+#    rbind(core_df, graph_df[i,"from_node"], graph_df[i,"to_node"])
+    #print(graph_df[i, "from_node"])
+#}
+
+
+
 #Saving
-save(pbmc,graph, file="pbmc_clustree.Rdata")
+save(pbmc,graph,graph_df, file="pbmc_clustree.Rdata")
 unlink("pbmc_clustree.Rdata")
 
-local({
-  load("pbmc_clustree.Rdata")
-  ls()
-})
+#loading
+load("pbmc_clustree.Rdata")

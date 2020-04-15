@@ -8,6 +8,10 @@ library(igraph)
 library(Seurat)
 library(tidyr)
 library(stringr)
+library(metagenomeSeq)
+library(msd16s)
+library(S4Vectors)
+library(metavizr)
 
 #setwd("./Documents/RScripts/TreeSE/")
 # data set link - https://s3-us-west-2.amazonaws.com/10x.files/samples/cell/pbmc3k/pbmc3k_filtered_gene_bc_matrices.tar.gz
@@ -79,8 +83,10 @@ pbmc$seurat_clusters
 
 
 #Saving
-save(pbmc,graph,graph_df, file="pbmc_clustree.Rdata")
-unlink("pbmc_clustree.Rdata")
+save(pbmc,graph,graph_df,pbmc_sce,pbmc_TreeSE, file="pbmc_clustree2.Rdata")
+save(pbmc,graph, file="pbmc_clustree.Rdata")
+
+unlink("pbmc_clustree2.Rdata")
 
 #loading
 load("pbmc_clustree.Rdata")

@@ -16,7 +16,7 @@ library(metavizr)
 #setwd("./Documents/RScripts/TreeSE/")
 # data set link - https://s3-us-west-2.amazonaws.com/10x.files/samples/cell/pbmc3k/pbmc3k_filtered_gene_bc_matrices.tar.gz
 
-#PBMC code
+#PBMC Seuratcode
 pbmc.data <- Read10X(data.dir = "data/filtered_gene_bc_matrices/hg19/")
 pbmc <- CreateSeuratObject(counts = pbmc.data, min.cells = 3, min.features = 200,
                            project = "pbmc3k")
@@ -86,7 +86,8 @@ pbmc$seurat_clusters
 save(pbmc,graph,graph_df,pbmc_sce,pbmc_TreeSE, file="pbmc_clustree2.Rdata")
 save(pbmc,graph, file="pbmc_clustree.Rdata")
 
-unlink("pbmc_clustree2.Rdata")
+unlink("pbmc_clustree.Rdata")
 
 #loading
 load("pbmc_clustree.Rdata")
+load("pbmc_clustree2.Rdata")

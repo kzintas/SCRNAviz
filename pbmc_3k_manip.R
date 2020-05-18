@@ -60,3 +60,64 @@ core_df <-core_df[order(core_df$to_node), ]
 modified_graph_df<-as_long_data_frame(graph_modified)
 
 View(modified_graph_df)
+
+
+n(neighbors(graph_modified, 1, mode="out"))
+
+for (nodes in V(graph_modified)){
+  a<-neighbors(graph_modified, nodes, mode="out")
+  b<-neighbors(graph_modified, nodes, mode="in")
+  if(length(a)==length(b))
+    print(nodes)
+}
+V(graph_modified)
+vertex.attributes(graph_modified, 4)
+edge.attributes(graph_modified, 4)
+degree(graph_modified, mode="out")
+degree(graph_modified, mode="in")
+
+x<-ego(graph_modified, nodes=1, mode="out", mindist=1)
+
+print(x)
+length(x)
+
+dfs(graph_modified,1)
+
+distance_table(graph_modified)
+max(distances(graph_modified, to=1))
+x<-distances(graph_modified, to=1)
+a<-table(x)
+type(x)
+df<-as.data.frame(x)
+df$observation <- 1:nrow(df) 
+graph2<-graph_modified
+p<- unique(x)
+for(val in unique(x)){
+  #m<- df %>% filter(V1==val)#select(df,df$V1==val)
+  m<-which(x==val)
+  print(m)
+  
+  
+}
+
+
+for(i in seq(2,length(p))){
+  #m<- df %>% filter(V1==val)#select(df,df$V1==val)
+  m<-which(x==p[i-1])
+  print(p[i])
+  print(m)
+  
+}
+x[14]
+
+unique(x)
+
+
+
+for(i in seq(2,length(p))){
+  #m<- df %>% filter(V1==val)#select(df,df$V1==val)
+  m<-which(x==p[i-1])
+  print(p[i])
+  print(m)
+  
+}

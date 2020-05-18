@@ -9,7 +9,7 @@ library(metavizr)
 
 
 
-#Seurat function to check validity
+#Seurat function to check validity               
 
 ImportFromSeurat <- function(seurat, clustree, cluster_names = NULL) {
     # get clusters from seurat
@@ -144,5 +144,6 @@ icicle_plot <- app$plot(mbiome, datasource_name="mmssdd", tree = "row")
 
 icicle_plot <- app$plot(pbmc_TreeSE, datasource_name="SCRNA", tree = "col")
 
-app <- startMetaviz(host = "http://localhost:7782")
+app <- startMetaviz(host = "localhost:7723")
 app$stop_app()
+app <- startMetavizStandalone

@@ -76,6 +76,27 @@ prune_tree<-function(graph_Df){
   return (Graph)
 }
 
+#Setting Edge attributes
+
+copy_edge_attributes<- function(source_edge, sink_edge, replacing_edge, OriginalGraph){
+  
+  get_src_attrs<-sapply(edge_attr(OriginalGraph),'[[',source_edge)
+  get_sink_attrs<-sapply(edge_attr(OriginalGraph),'[[',sink_edge)
+  
+  get_src_attrs["to_clust"]<-get_sink_attrs["to_clust"]
+  get_src_attrs["to_RNA_snn_res."] <- get_sink_attrs["to_RNA_snn_res."]
+  
+  get_src_attrs<- as.list(get_src_attrs)
+  get_sink_attrs<- as.list(get_sink_attrs)
+  
+  
+  edge_attr(OriginalGraph, index=E(OriginalGraph)[[replacing_edge]])<- get_src_attrs
+  #print('b')
+  print(E(OriginalGraph)[[replacing_edge]])
+  
+  return (replacing_edge)
+}
+
 #collapse TREE
 
 collapse_tree<- function(Original_graph){
@@ -84,7 +105,7 @@ collapse_tree<- function(Original_graph){
   delete_set<-vector('numeric')
   for(i in seq(length(layered_dist),2)){  
     #Get distances for each layer
-    
+    print(E(Original_graph)[[]])
     prev_layer<-which(node_dists==layered_dist[i-1])
     current_layer<-which(node_dists==layered_dist[i])
     
@@ -94,6 +115,7 @@ collapse_tree<- function(Original_graph){
         nei_in<-neighbors(Original_graph,prev_layer[j],mode="in")
         #find_Original_Child
         nei_out<-neighbors(Original_graph,prev_layer[j],mode="out")
+        #print(nei_out)
         for(vertices in nei_out){
          
           Original_graph<-Original_graph+edge(nei_in,vertices)#%>%
@@ -102,18 +124,41 @@ collapse_tree<- function(Original_graph){
           to_edge<-get.edge.ids(Original_graph, c(prev_layer[j],vertices))
           
           new_edge<-get.edge.ids(Original_graph, c(as.integer(nei_in),vertices))
-          print(E(graph_modified)[[from_edge]])
-          E(graph_modified)[[from_edge]]
+          
+          #print(E(Original_graph)[[from_edge %->% to_edge]])
+          get_src_attrs<-sapply(edge_attr(Original_graph),'[[',from_edge)
+          get_sink_attrs<-sapply(edge_attr(Original_graph),'[[',to_edge)
+          
+          get_src_attrs["to_clust"]<-get_sink_attrs["to_clust"]
+          get_src_attrs["to_RNA_snn_res."] <- get_sink_attrs["to_RNA_snn_res."]
+          
+          get_src_attrs<- as.list(get_src_attrs)
+          get_sink_attrs<- as.list(get_sink_attrs)
+          
+          
+          edge_attr(Original_graph, index=E(Original_graph)[[new_edge]])<- get_src_attrs
+          
+          #print(E(Original_graph)[[new_edge]])
+          #new_edge<-copy_edge_attributes(from_edge, to_edge, new_edge, Original_graph)
+          #print(E(Original_graph)[[new_edge]])
+          #print(E(graph_modified)[[from_edge]])
+          #E(graph_modified)[[from_edge]]
+          #print('a')
+          #print(E(Original_graph)[[new_edge]])
+          
         }
       }
-      delete_set<-c(delete_set,prev_layer)
+      #delete_set<-c(delete_set,prev_layer)
+      Original_graph<-delete_vertices(Original_graph, prev_layer)
 
     }
   }
-  Original_graph<-delete_vertices(Original_graph, delete_set)
+  #Original_graph<-delete_vertices(Original_graph, delete_set)
   
   return(Original_graph)
 }
+
+
 
 
 #Plot tree to check if implementation is correct

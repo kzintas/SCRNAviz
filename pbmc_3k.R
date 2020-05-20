@@ -36,15 +36,16 @@ runSeurat<- function(datadir){
 #Run SEURAT
 pbmc<- runSeurat("data/filtered_gene_bc_matrices/hg19/")
 
-#create Clustree
+#create Clustree and The graph form
 
 graph<-clustree(pbmc , return="graph")
 graph_df<-as_long_data_frame(graph)
 
-core_df <- subset(graph_df[c("from_node","to_node", "is_core")], is_core == FALSE)
-core_df[order(core_df$to_node, decreasing=TRUE), ]
+# separate Nodes which are not in core tree
+not_core_df <- subset(graph_df[c("from_node","to_node", "is_core")], is_core == FALSE)
+not_core_df[order(not_core_df$to_node, decreasing=TRUE), ]
 
-## Rest of the code is not required to run the analysis
+## REST of the code is not required to run the analysis
 
 #Saving
 save(pbmc,graph,graph_df,pbmc_sce,pbmc_TreeSE, file="pbmc_clustree2.Rdata")
@@ -95,7 +96,7 @@ pbmc$seurat_clusters
 #for (i in 1:nrow(graph_df)){
   
 #  if(graph_df[i,"is_core"]== FALSE)
-#    rbind(core_df, graph_df[i,"from_node"], graph_df[i,"to_node"])
+#    rbind(csore_df, graph_df[i,"from_node"], graph_df[i,"to_node"])
     #print(graph_df[i, "from_node"])
 #}
 

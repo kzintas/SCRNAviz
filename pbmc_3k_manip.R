@@ -99,63 +99,101 @@ copy_edge_attributes<- function(source_edge, sink_edge, replacing_edge, Original
 
 #collapse TREE
 
+
 collapse_tree<- function(Original_graph){
+  
+  #Distances of nodes and layers
   node_dists<-distances(Original_graph, to=1)
   layered_dist<- unique(distances(Original_graph, to=1))
-  delete_set<-vector('numeric')
-  for(i in seq(length(layered_dist),2)){  
-    #Get distances for each layer
-    print(E(Original_graph)[[]])
+  
+  #Which vertices and edges we want to delete
+  delete_set_edges<-vector('numeric')
+  delete_set_vertices<- vector('numeric')
+
+  #Vertex and edge lists of the graph from which we will construct the collapsed graph
+  ver_list<-as_data_frame(Original_graph, what= "vertices")
+  edge_list<-as_data_frame(Original_graph, what= "edges")
+  
+  i<- length(layered_dist)
+  while(i >= 2){  
+    
     prev_layer<-which(node_dists==layered_dist[i-1])
     current_layer<-which(node_dists==layered_dist[i])
     
     if(length(prev_layer)==length(current_layer)){
-      for(j in seq(1,length(current_layer))){
+      while(length(prev_layer)==length(current_layer)){
+    
+        delete_set_vertices<-c(delete_set_vertices,prev_layer)
+        i<- i-1
+        
+        prev_layer<-which(node_dists==layered_dist[i-1])
+        
+      }
+      
+      for(j in seq(1,length(prev_layer))){
         #find parent
-        nei_in<-neighbors(Original_graph,prev_layer[j],mode="in")
+        nei_in<-prev_layer[j]
+        
         #find_Original_Child
-        nei_out<-neighbors(Original_graph,prev_layer[j],mode="out")
-        #print(nei_out)
-        for(vertices in nei_out){
-         
-          Original_graph<-Original_graph+edge(nei_in,vertices)#%>%
-          from_edge<-get.edge.ids(Original_graph,c(as.integer(nei_in),prev_layer[j]))
+        temp_out<-neighbors(Original_graph,prev_layer[j],mode="out")
+        
+        nei_out<- c()
+        
+        for(nodes in temp_out){
+          temp_node<-neighbors(Original_graph,nodes,mode="out")
+          repeat{
+            
+            if(temp_node %in% current_layer){
+            
+              nei_out<- c(nei_out, temp_node)
+              break
+            }
+            
+            temp_node<-neighbors(Original_graph,temp_node,mode="out")
+          }
+        }
+        
+        for(k in seq (1,length(nei_out))){
           
-          to_edge<-get.edge.ids(Original_graph, c(prev_layer[j],vertices))
+          from_edge<-get.edge.ids(Original_graph,c(prev_layer[j],as.integer(temp_out[k])))
           
-          new_edge<-get.edge.ids(Original_graph, c(as.integer(nei_in),vertices))
+          to_edge<-incident(Original_graph, as.integer(nei_out[k]), mode="in")
           
-          #print(E(Original_graph)[[from_edge %->% to_edge]])
-          get_src_attrs<-sapply(edge_attr(Original_graph),'[[',from_edge)
-          get_sink_attrs<-sapply(edge_attr(Original_graph),'[[',to_edge)
+          get_src_attrs<- as.list(sapply(edge_attr(Original_graph),'[[',from_edge))
+          
+          get_sink_attrs<- as.list(sapply(edge_attr(Original_graph),'[[',to_edge))
           
           get_src_attrs["to_clust"]<-get_sink_attrs["to_clust"]
+          
           get_src_attrs["to_RNA_snn_res."] <- get_sink_attrs["to_RNA_snn_res."]
           
-          get_src_attrs<- as.list(get_src_attrs)
-          get_sink_attrs<- as.list(get_sink_attrs)
+          get_src_attrs<-append(get_src_attrs, list(from=prev_layer[j], to= as.integer(nei_out[k])),0)
           
+          edge_list<-rbind(edge_list, get_src_attrs)
           
-          edge_attr(Original_graph, index=E(Original_graph)[[new_edge]])<- get_src_attrs
-          
-          #print(E(Original_graph)[[new_edge]])
-          #new_edge<-copy_edge_attributes(from_edge, to_edge, new_edge, Original_graph)
-          #print(E(Original_graph)[[new_edge]])
-          #print(E(graph_modified)[[from_edge]])
-          #E(graph_modified)[[from_edge]]
-          #print('a')
-          #print(E(Original_graph)[[new_edge]])
           
         }
       }
-      #delete_set<-c(delete_set,prev_layer)
-      Original_graph<-delete_vertices(Original_graph, prev_layer)
-
+      
     }
+    i<- i-1
   }
-  #Original_graph<-delete_vertices(Original_graph, delete_set)
+
+  for(nodes in delete_set_vertices){
+    adj_edge<-incident(Original_graph, nodes, mode="all")
+    delete_set_edges<-c(delete_set_edges,adj_edge)
+
+  }
+
+  ver_list<-ver_list[-delete_set_vertices,]
+  id<- rownames(ver_list)
+  ver_list<- cbind(name=id, ver_list)
   
-  return(Original_graph)
+  edge_list<- edge_list[-delete_set_edges, ]
+
+  dummy_graph <- graph_from_data_frame(edge_list, directed=TRUE, vertices=ver_list)
+  
+  return(dummy_graph)
 }
 
 
@@ -173,6 +211,7 @@ plotting_collapsed_tree<-function(Graph_original){
        vertex.label.dist=1,  edge.arrow.size=0.5)
 }
 
+graph_df<-as_long_data_frame(graph)
 
 #Get pruned tree with only true core edges
 modified_graph<-prune_tree(graph_df)
@@ -197,7 +236,7 @@ plot(modified_graph, layout=layout_as_tree, vertex.size=4,
 
 
 ###Tried some stuff
-
+make_empty_graph()
 #c(paste(Names,"_res")
 plot(graph, layout=layout_as_tree, vertex.size=4,
      vertex.label.dist=1,  edge.arrow.size=0.5)

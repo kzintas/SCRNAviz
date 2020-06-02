@@ -102,3 +102,4 @@ pbmc$seurat_clusters
 
 
 
+g<- clustree(pbmc)

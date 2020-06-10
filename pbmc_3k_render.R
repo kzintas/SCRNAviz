@@ -229,7 +229,7 @@ reassign_and_collapse <- function(clustree_graph, Seurat_obj) {
   
 }
 
-
+pbmc_TreeSE<- reassign_and_collapse(graph, pbmc)
 app <- startMetaviz()
 
 icicle_plot <-

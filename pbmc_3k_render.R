@@ -1,3 +1,17 @@
+library(clustree)
+library(SingleCellExperiment)
+library(TreeSummarizedExperiment)
+library(dplyr)
+library(tidygraph)
+library(ggraph)
+library(igraph)
+library(Seurat)
+library(tidyr)
+library(stringr)
+library(metagenomeSeq)
+library(msd16s)
+library(S4Vectors)
+library(metavizr)
 #function for checking alternate core edge
 
 check_alternate <- function(sub_df, all_df)
@@ -195,7 +209,7 @@ reassign_and_collapse <- function(clustree_graph, Seurat_obj) {
   graph_df <- as_long_data_frame(clustree_graph)
   
   #Get pruned tree with only true core edges
-  modified_graph <- prune_tree(graph_df, Seurat_obj)
+  modified_obj <- prune_tree(graph_df, Seurat_obj)
   #Data Frame of modified tree
   #modified_graph_df <- as_long_data_frame(modified_graph)
   
@@ -229,6 +243,8 @@ reassign_and_collapse <- function(clustree_graph, Seurat_obj) {
   
 }
 
+#Create PBMC object and graph
+graph<-clustree(pbmc , prop_filter=0, return="graph")
 pbmc_TreeSE<- reassign_and_collapse(graph, pbmc)
 app <- startMetaviz()
 

@@ -109,12 +109,12 @@ collapse_tree <- function(Original_graph) {
   layered_dist <- unique(distances(Original_graph, to = 1))
   
   #Which vertices and edges we want to delete
-  delete_set_edges <- vector('numeric')
+  #delete_set_edges <- vector('numeric')
   delete_set_vertices <- vector('numeric')
   
   #Vertex and edge lists of the graph from which we will construct the collapsed graph
   ver_list <- as_data_frame(Original_graph, what = "vertices")
-  edge_list <- as_data_frame(Original_graph, what = "edges")
+  #edge_list <- as_data_frame(Original_graph, what = "edges")
   
   i <- length(layered_dist)
   while (i >= 2) {
@@ -130,78 +130,38 @@ collapse_tree <- function(Original_graph) {
         
       }
       
-      for (j in seq(1, length(prev_layer))) {
-        #find parent
-        nei_in <- prev_layer[j]
-        
-        #find_Original_Child
-        temp_out <-
-          neighbors(Original_graph, prev_layer[j], mode = "out")
-        
-        nei_out <- c()
-        
-        for (nodes in temp_out) {
-          temp_node <- neighbors(Original_graph, nodes, mode = "out")
-          repeat {
-            if (temp_node %in% current_layer) {
-              nei_out <- c(nei_out, temp_node)
-              break
-            }
-            
-            temp_node <-
-              neighbors(Original_graph, temp_node, mode = "out")
-          }
-        }
-        
-        for (k in seq (1, length(nei_out))) {
-          from_edge <-
-            get.edge.ids(Original_graph, c(prev_layer[j], as.integer(temp_out[k])))
-          
-          to_edge <-
-            incident(Original_graph, as.integer(nei_out[k]), mode = "in")
-          
-          get_src_attrs <-
-            as.list(sapply(edge_attr(Original_graph), '[[', from_edge))
-          
-          get_sink_attrs <-
-            as.list(sapply(edge_attr(Original_graph), '[[', to_edge))
-          
-          get_src_attrs["to_clust"] <- get_sink_attrs["to_clust"]
-          
-          get_src_attrs["to_RNA_snn_res."] <-
-            get_sink_attrs["to_RNA_snn_res."]
-          
-          get_src_attrs <-
-            append(get_src_attrs,
-                   list(from = prev_layer[j], to = as.integer(nei_out[k])),
-                   0)
-          
-          edge_list <- rbind(edge_list, get_src_attrs)
-          
-          
-        }
-      }
       
     }
     i <- i - 1
   }
   
-  for (nodes in delete_set_vertices) {
-    adj_edge <- incident(Original_graph, nodes, mode = "all")
-    delete_set_edges <- c(delete_set_edges, adj_edge)
+  #for (nodes in delete_set_vertices) {
+  #  adj_edge <- incident(Original_graph, nodes, mode = "all")
+  #  delete_set_edges <- c(delete_set_edges, adj_edge)
     
-  }
+  #}
   
   ver_list <- ver_list[-delete_set_vertices,]
-  id <- rownames(ver_list)
-  ver_list <- cbind(name = id, ver_list)
+  #id <- rownames(ver_list)
+  #ver_list <- cbind(name = id, ver_list)
   
-  edge_list <- edge_list[-delete_set_edges, ]
+  #edge_list <- edge_list[-delete_set_edges, ]
   
-  dummy_graph <-
-    graph_from_data_frame(edge_list, directed = TRUE, vertices = ver_list)
-  dummy_graph <- as_tbl_graph(dummy_graph)
+  #dummy_graph <-
+  #  graph_from_data_frame(edge_list, directed = TRUE, vertices = ver_list)
+  #dummy_graph <- as_tbl_graph(dummy_graph)
   return(ver_list)
+}
+
+checkIfNotTree <- function(cluster_df) {
+  cols <- colnames(cluster_df)    
+  
+  if (unique(cluster_df[cols[1]]) > 1) {
+    cluster_df$root <- "AllClusters"
+    print(cluster_df)
+  }    
+  cols <- c("root", cols)
+  cluster_df[cols]
 }
 
 
@@ -235,6 +195,11 @@ reassign_and_collapse <- function(clustree_graph, Seurat_obj) {
   }
   samples<- rownames(clusters)
   clusters<- cbind(clusters, samples)
+  
+  clusters<- checkIfNotTree(clusters)
+  
+  print(clusters)
+  
   tree <- TreeIndex(clusters)
   rownames(tree) <- rownames(clusters)
   
@@ -245,16 +210,31 @@ reassign_and_collapse <- function(clustree_graph, Seurat_obj) {
 
 #Create PBMC object and graph
 graph<-clustree(pbmc , prop_filter=0, return="graph")
+
+
+graph<-clustree(pbmc_small , prop_filter=0, return="graph")
+
 pbmc_TreeSE<- reassign_and_collapse(graph, pbmc)
+
+pbmc_small_TreeSE<- reassign_and_collapse(graph, pbmc_small)
+
+save(pbmc_TreeSE, file="pbmc_TreeSE.Rdata")
+
+
 app <- startMetaviz()
 
 icicle_plot <-
   app$plot(pbmc_TreeSE, datasource_name = "SCRNA", tree = "col")
-heatmap <- app$chart_mgr$revisualize(chart_type = "HeatmapPlot", chart = icicle_plot)
-
+#heatmap <- app$chart_mgr$revisualize(chart_type = "HeatmapPlot", chart = icicle_plot)
+mes <- app$get_ms_object(chart_id_or_object = icicle_plot)
+ms_list <- mes$get_measurements()
+selected_ms <- ms_list[10000:10100]
+app$chart_mgr$visualize(chart_type = "HeatmapPlot", measurements = selected_ms)
 app$stop_app()
 app$is_server_closed()
 
 aggr<-aggregateTree(pbmc_TreeSE, selectedLevel=3, by="col")
 icicle_plot <-
   app$plot(aggr, datasource_name = "SCRNA", tree = "col")
+
+str(clusters)

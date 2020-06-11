@@ -12,6 +12,14 @@ library(metagenomeSeq)
 library(msd16s)
 library(S4Vectors)
 library(metavizr)
+# install scater https://bioconductor.org/packages/release/bioc/html/scater.html
+library(scater)
+# install loomR from GitHub using the remotes package remotes::install_github(repo =
+# 'mojaveazure/loomR', ref = 'develop')
+library(loomR)
+library(patchwork)
+library(scRNAseq)
+
 #function for checking alternate core edge
 
 check_alternate <- function(sub_df, all_df)
@@ -27,7 +35,7 @@ check_alternate <- function(sub_df, all_df)
       if (sub_df$to_node[i] == all_df$to_node[j] &&
           sub_df$from_node[i] != all_df$from_node[j] &&
           all_df$is_core[j] == TRUE) {
-        assign_df[nrow(assign_df) + 1, ] <-
+        assign_df[nrow(assign_df) + 1,] <-
           c(sub_df$to_node[i],
             sub_df$from_node[i],
             all_df$from_node[j])
@@ -51,34 +59,34 @@ manip_names <- function(Df)
 }
 
 #for each row in the core edge false dataset, find out corresponding source and sink in Seurat, and change accordingly
-change_assignment <- function(Df, Seurat_obj) {
+change_assignment <- function(Df, Cluster_obj) {
   for (i in seq(1:nrow(Df))) {
-    sink_res = match(Df$`Sink_node_res_res`[i], colnames(Seurat_obj@meta.data))
-    source_res = match(Df$`Assign_from_res`[i], colnames(Seurat_obj@meta.data))
+    sink_res = match(Df$`Sink_node_res_res`[i], colnames(Cluster_obj))
+    source_res = match(Df$`Assign_from_res`[i], colnames(Cluster_obj))
+    
+    
     
     #lapply(Seurat_obj@meta.data, change_src_sink, df_row=Df[1,])
-    for (j in 1:nrow(Seurat_obj@meta.data)) {
+    for (j in 1:nrow(Cluster_obj)) {
       #change_src_sink(Seurat_obj@meta.data[j,],df_row=Df[1,])
-      if (Seurat_obj@meta.data[j, sink_res] == Df$Sink_node_res_clust[i]  &&
-          Seurat_obj@meta.data[j, source_res] == Df$Assign_from_clust[i]) {
+      if (Cluster_obj[[j, sink_res]] == Df$Sink_node_res_clust[i]  &&
+          Cluster_obj[[j, source_res]] == Df$Assign_from_clust[i]) {
         #print(Seurat_obj@meta.data[j,source_res])
-        Seurat_obj@meta.data[j, ][source_res] <-
-          Df$`Assign_to_clust`[i]
-        
+        Cluster_obj[[j, source_res]] <- Df$`Assign_to_clust`[i]
       }
       
     }
   }
-  return (Seurat_obj)
+  return (Cluster_obj)
   #TODO-> separate assignment into another function
 }
 #Prune the tree so only core edges remain
-prune_tree <- function(graph_Df, Seurat_obj) {
+prune_tree <- function(graph_Df, cluster_df) {
   repeat {
     graph_Df <- graph_Df[!duplicated(names(graph_Df))]
-    k = nrow(graph_Df[graph_Df$is_core == FALSE,])
+    k = nrow(graph_Df[graph_Df$is_core == FALSE, ])
     #print(k)
-    if (nrow(graph_Df[graph_Df$is_core == FALSE,]) == 0)
+    if (nrow(graph_Df[graph_Df$is_core == FALSE, ]) == 0)
       break
     #select rows where CORE is False
     not_core_df <-  graph_Df %>%
@@ -88,16 +96,25 @@ prune_tree <- function(graph_Df, Seurat_obj) {
     #Apply function
     assign_df <- check_alternate(not_core_df, graph_Df)
     assign_df <- manip_names(assign_df)
-    Seurat_obj <- change_assignment(assign_df, Seurat_obj)
-    Graph <- clustree(Seurat_obj , prop_filter=0, return = "graph")
+    cluster_df <- change_assignment(assign_df, cluster_df)
+    Graph <-
+      clustree(
+        cluster_df ,
+        prefix = "RNA_snn_res.",
+        prop_filter = 0,
+        return = "graph"
+      )
+    
     graph_Df <- as_long_data_frame(Graph)
     
     
     
   }
-  objList <- list("Seurat_obj" = Seurat_obj, "Clustree_obj" = Graph)
+  objList <-
+    list("Cluster_obj" = cluster_df, "Clustree_obj" = Graph)
   #return (Graph)
 }
+
 
 
 #collapse TREE
@@ -138,10 +155,10 @@ collapse_tree <- function(Original_graph) {
   #for (nodes in delete_set_vertices) {
   #  adj_edge <- incident(Original_graph, nodes, mode = "all")
   #  delete_set_edges <- c(delete_set_edges, adj_edge)
-    
+  
   #}
   
-  ver_list <- ver_list[-delete_set_vertices,]
+  ver_list <- ver_list[-delete_set_vertices, ]
   #id <- rownames(ver_list)
   #ver_list <- cbind(name = id, ver_list)
   
@@ -154,12 +171,12 @@ collapse_tree <- function(Original_graph) {
 }
 
 checkIfNotTree <- function(cluster_df) {
-  cols <- colnames(cluster_df)    
+  cols <- colnames(cluster_df)
   
   if (unique(cluster_df[cols[1]]) > 1) {
     cluster_df$root <- "AllClusters"
-    print(cluster_df)
-  }    
+    #print(cluster_df)
+  }
   cols <- c("root", cols)
   cluster_df[cols]
 }
@@ -169,13 +186,14 @@ reassign_and_collapse <- function(clustree_graph, Seurat_obj) {
   graph_df <- as_long_data_frame(clustree_graph)
   
   #Get pruned tree with only true core edges
-  modified_obj <- prune_tree(graph_df, Seurat_obj)
+  modified_obj <- prune_tree(graph_df, Seurat_obj@meta.data)
   #Data Frame of modified tree
   #modified_graph_df <- as_long_data_frame(modified_graph)
   
+  
   #odified graph and seurat object
   modified_graph = modified_obj$Clustree_obj
-  modified_Seurat = modified_obj$Seurat_obj
+  clusters <-  modified_obj$Cluster_obj
   
   
   collapsed_graph <- collapse_tree(modified_graph)
@@ -183,42 +201,47 @@ reassign_and_collapse <- function(clustree_graph, Seurat_obj) {
   #collapsed_graph_df <- as_long_data_frame(collapsed_graph)
   cluster_names <-
     unique(sapply(strsplit(collapsed_graph$node, "C"), '[', 1))
-  clusters <- modified_Seurat@meta.data
+  
+  #clusters <- modified_Seurat@meta.data
   clusters <- clusters[, cluster_names]
   
   
-  clusnames<-str_replace(names(clusters),pattern="RNA_snn_res.",replacement = "Clust")
-  names(clusters)<- clusnames
+  clusnames <-
+    str_replace(names(clusters),
+                pattern = "RNA_snn_res.",
+                replacement = "Clust")
+  names(clusters) <- clusnames
   
-  for( clusnames in names(clusters)){
-    clusters[[clusnames]]<-paste(clusnames, clusters[[clusnames]], sep='C')
+  for (clusnames in names(clusters)) {
+    clusters[[clusnames]] <-
+      paste(clusnames, clusters[[clusnames]], sep = 'C')
   }
-  samples<- rownames(clusters)
-  clusters<- cbind(clusters, samples)
+  samples <- rownames(clusters)
+  clusters <- cbind(clusters, samples)
   
-  clusters<- checkIfNotTree(clusters)
+  clusters <- checkIfNotTree(clusters)
   
-  print(clusters)
+  #print(clusters)
   
   tree <- TreeIndex(clusters)
   rownames(tree) <- rownames(clusters)
   
   pbmc_TreeSE <-
-    TreeSummarizedExperiment(SimpleList(counts = GetAssayData(modified_Seurat)), colData = tree)
+    TreeSummarizedExperiment(SimpleList(counts = GetAssayData(Seurat_obj)), colData = tree)
   
 }
 
 #Create PBMC object and graph
-graph<-clustree(pbmc , prop_filter=0, return="graph")
+graph <- clustree(pbmc , prop_filter = 0, return = "graph")
 
 
-graph<-clustree(pbmc_small , prop_filter=0, return="graph")
+#graph <- clustree(pbmc_small , prop_filter = 0, return = "graph")
 
-pbmc_TreeSE<- reassign_and_collapse(graph, pbmc)
+pbmc_TreeSE <- reassign_and_collapse(graph, pbmc)
 
-pbmc_small_TreeSE<- reassign_and_collapse(graph, pbmc_small)
+#pbmc_small_TreeSE <- reassign_and_collapse(graph, pbmc_small)
 
-save(pbmc_TreeSE, file="pbmc_TreeSE.Rdata")
+save(pbmc_TreeSE, file = "pbmc_TreeSE.Rdata")
 
 
 app <- startMetaviz()
@@ -233,7 +256,7 @@ app$chart_mgr$visualize(chart_type = "HeatmapPlot", measurements = selected_ms)
 app$stop_app()
 app$is_server_closed()
 
-aggr<-aggregateTree(pbmc_TreeSE, selectedLevel=3, by="col")
+aggr <- aggregateTree(pbmc_TreeSE, selectedLevel = 3, by = "col")
 icicle_plot <-
   app$plot(aggr, datasource_name = "SCRNA", tree = "col")
 

@@ -170,23 +170,23 @@ collapse_tree <- function(Original_graph) {
   return(ver_list)
 }
 
+
+
 checkIfNotTree <- function(cluster_df) {
   cols <- colnames(cluster_df)
-  
-  if (unique(cluster_df[cols[1]]) > 1) {
+  if (length(unique(cluster_df[[1]])) > 1) {
     cluster_df$root <- "AllClusters"
-    #print(cluster_df)
+    cols <- c("root", cols)
   }
-  cols <- c("root", cols)
+  
   cluster_df[cols]
 }
 
-
-reassign_and_collapse <- function(clustree_graph, Seurat_obj) {
+reassign_and_collapse <- function(clustree_graph, cluster_df, count_matrix) {
   graph_df <- as_long_data_frame(clustree_graph)
   
   #Get pruned tree with only true core edges
-  modified_obj <- prune_tree(graph_df, Seurat_obj@meta.data)
+  modified_obj <- prune_tree(graph_df, cluster_df)
   #Data Frame of modified tree
   #modified_graph_df <- as_long_data_frame(modified_graph)
   
@@ -205,11 +205,11 @@ reassign_and_collapse <- function(clustree_graph, Seurat_obj) {
   #clusters <- modified_Seurat@meta.data
   clusters <- clusters[, cluster_names]
   
-  
-  clusnames <-
-    str_replace(names(clusters),
-                pattern = "RNA_snn_res.",
-                replacement = "Clust")
+  #[[:digit:]]+\\.*[[:digit:]]
+  clusnames<- as.numeric(gsub("[^\\d]+\\.*[^\\d]", "", names(clusters), perl=TRUE))
+  clusnames<- paste0("clust",clusnames)
+  print(clusnames)  
+  #clusnames <-str_replace(names(clusters),pattern = "RNA_snn_res.",replacement = "Clust")
   names(clusters) <- clusnames
   
   for (clusnames in names(clusters)) {
@@ -227,7 +227,7 @@ reassign_and_collapse <- function(clustree_graph, Seurat_obj) {
   rownames(tree) <- rownames(clusters)
   
   pbmc_TreeSE <-
-    TreeSummarizedExperiment(SimpleList(counts = GetAssayData(Seurat_obj)), colData = tree)
+    TreeSummarizedExperiment(SimpleList(counts = count_matrix), colData = tree)
   
 }
 
@@ -237,7 +237,7 @@ graph <- clustree(pbmc , prop_filter = 0, return = "graph")
 
 #graph <- clustree(pbmc_small , prop_filter = 0, return = "graph")
 
-pbmc_TreeSE <- reassign_and_collapse(graph, pbmc)
+pbmc_TreeSE <- reassign_and_collapse(graph, pbmc@meta.data, GetAssayData(pbmc))
 
 #pbmc_small_TreeSE <- reassign_and_collapse(graph, pbmc_small)
 
@@ -260,4 +260,4 @@ aggr <- aggregateTree(pbmc_TreeSE, selectedLevel = 3, by = "col")
 icicle_plot <-
   app$plot(aggr, datasource_name = "SCRNA", tree = "col")
 
-str(clusters)
+#str(clusters)

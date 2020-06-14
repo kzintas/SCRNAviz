@@ -38,7 +38,9 @@ pbmc<- runSeurat("data/filtered_gene_bc_matrices/hg19/")
 
 #create Clustree and The graph form
 
-graph<-clustree(pbmc , return="graph")
+#graph<-clustree(pbmc , return="graaph")
+graph<-clustree(pbmc@meta.data , prefix = "RNA_snn_res.", return="graph")
+
 graph_df<-as_long_data_frame(graph)
 
 # separate Nodes which are not in core tree
@@ -70,7 +72,7 @@ subgraph
 plot(subgraph, layout=layout_as_tree, vertex.size=4,
      vertex.label.dist=1,  edge.arrow.size=0.5)
 
-plot(graph, layout=layout_as_tree, vertex.size=4,
+plot(collapsed_graph, layout=layout_as_tree, vertex.size=4,
      vertex.label.dist=1,  edge.arrow.size=0.5)
 
 
@@ -101,5 +103,55 @@ pbmc$seurat_clusters
 #}
 
 
+clustree(pbmc@meta.data , prefix = "RNA_snn_res.")
+g<- clustree(pbmc@meta.data , prefix = "RNA_snn_res.",  return="graph")
+plot(g, layout=layout_as_tree, vertex.size=4,
+     vertex.label.dist=1,  edge.arrow.size=0.5)
 
-g<- clustree(pbmc)
+g<- as_long_data_frame(graph)
+g <- g[!duplicated(names(g))]
+g <-str_replace(names(clusters),pattern = "RNA_snn_res.",replacement = "Clust")
+not_core_df <- subset(graph_df, is_core == FALSE)
+g[g$is_core==TRUE,]
+g[g$is_core==FALSE,]
+
+alt<-check_alternate(g[g$is_core==FALSE,],g[g$is_core==TRUE,])
+
+alt<-check_alternate2(g[g$is_core==FALSE,],g[g$is_core==TRUE,])
+
+alt<- manip_names(alt)
+str(alt)
+
+clusdata<- pbmc@meta.data
+str(clusdata)
+str(clusdata[,5:9])
+
+
+clusdata<-clusdata %>% 
+  select(starts_with("RNA_snn"))
+
+
+str(clusdata)
+
+clusnames<- colnames(clusdata)
+clusnames <-
+  as.numeric(gsub("[^\\d]+\\.*[^\\d]", "", clusnames, perl = TRUE))
+clusnames <- paste0("cluster", clusnames)
+colnames(clusdata)<- clusnames
+
+print(clusnames)
+clusdata<-change_assignment(alt, clusdata)
+clustree(clusdata , prefix = "cluster")
+
+
+
+clustree(pbmc@meta.data , prefix = "RNA_snn_res.")
+g<- clustree(pbmc@meta.data , prefix = "RNA_snn_res.",  return="graph")
+plot(g, layout=layout_as_tree, vertex.size=4,
+     vertex.label.dist=1,  edge.arrow.size=0.5)
+
+
+
+
+clusdata<-clusdata %>% 
+  select(starts_with("RNA_snn"))

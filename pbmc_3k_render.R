@@ -29,7 +29,13 @@ check_alternate <- function(sub_df, all_df)
     "Sink_node_clust" = character(),
     "Assign_from_res" = character(),
     "Assign_from_clust" = character(),
-    "Assign_to_res" = character(),
+   
+SCRNA_3  datasourceGroup caches cleared
+> #Stop app and check if stopped
+> app$stop_app()
+chart  epivizChart_1  removed and disconnected
+chart  epivizChart_2  removed and disconnected
+chart  epivizChart_3  removed and disconnected "Assign_to_res" = character(),
     "Assign_to_clust" = character(),
     stringsAsFactors = FALSE
   )
@@ -184,7 +190,7 @@ checkIfNotTree <- function(cluster_df) {
     cluster_df$root <- "AllClusters"
     cols <- c("root", cols)
   }
-  
+  print(unique(cluster_df[[1]]))
   cluster_df[cols]
 }
 
@@ -199,7 +205,7 @@ rename_clusters <- function(clusdata) {
 }
 
 reassign_and_collapse <-
-  function(clustree_graph, cluster_df, count_matrix) {
+  function(cluster_df, count_matrix) {
     cluster_df <- rename_clusters(cluster_df)
     clustree_graph<- clustree(cluster_df , prefix="cluster", prop_filter = 0, return = "graph")
     graph_df <- as_long_data_frame(clustree_graph)
@@ -257,20 +263,21 @@ reassign_and_collapse <-
   }
 
 
+
+
+
+##pbmc example
 clusterdata<- pbmc@meta.data
 clusterdata<-clusterdata %>% 
   select(starts_with("RNA_snn"))
 
 
 #Create PBMC object and graph
-graph <- clustree(pbmc , prop_filter = 0, return = "graph")
-
-
-#graph <- clustree(pbmc_small , prop_filter = 0, return = "graph")
+#graph <- clustree(pbmc , prop_filter = 0, return = "graph")
 
 #Call func from here
 pbmc_TreeSE <-
-  reassign_and_collapse(graph, clusterdata, GetAssayData(pbmc))
+  reassign_and_collapse(clusterdata, GetAssayData(pbmc))
 
 
 #Save Object
@@ -287,11 +294,16 @@ icicle_plot <-
 #heatmap <- app$chart_mgr$revisualize(chart_type = "HeatmapPlot", chart = icicle_plot)
 
 
+# Identify the 10 most highly variable genes
+pbmc <- FindVariableFeatures(pbmc, selection.method = "vst", nfeatures = 2000)
 #Generate Heatmap
-mes <- app$get_ms_object(chart_id_or_object = icicle_plot)
-ms_list <- mes$get_measurements()
-selected_ms <- ms_list[10000:10100]
-app$chart_mgr$visualize(chart_type = "HeatmapPlot", measurements = selected_ms)
+facetZoom <- app$get_ms_object(chart_id_or_object = icicle_plot)
+
+ms_list <- facetZoom$get_measurements()
+top100 <- head(VariableFeatures(pbmc), 100)
+subset_ms_list <- Filter(function(ms) ms@id %in% top100, ms_list)
+
+app$chart_mgr$visualize(chart_type = "HeatmapPlot", measurements = subset_ms_list)
 
 #Stop app and check if stopped
 app$stop_app()

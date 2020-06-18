@@ -19,6 +19,10 @@ library(scater)
 library(loomR)
 library(patchwork)
 library(scRNAseq)
+library(SC3)
+library(scran)
+library(scater)
+
 
 #function for checking alternate core edge
 
@@ -29,20 +33,14 @@ check_alternate <- function(sub_df, all_df)
     "Sink_node_clust" = character(),
     "Assign_from_res" = character(),
     "Assign_from_clust" = character(),
-   
-SCRNA_3  datasourceGroup caches cleared
-> #Stop app and check if stopped
-> app$stop_app()
-chart  epivizChart_1  removed and disconnected
-chart  epivizChart_2  removed and disconnected
-chart  epivizChart_3  removed and disconnected "Assign_to_res" = character(),
+    "Assign_to_res" = character(),
     "Assign_to_clust" = character(),
     stringsAsFactors = FALSE
   )
   for (i in seq(1, nrow(sub_df))) {
     for (j in seq(1, nrow(all_df))) {
       if (sub_df$to_node[i] == all_df$to_node[j]) {
-        assign_df[nrow(assign_df) + 1,] <-
+        assign_df[nrow(assign_df) + 1, ] <-
           c(
             sub_df$to_cluster[i],
             sub_df$to_clust[i],
@@ -84,7 +82,8 @@ change_assignment <- function(Df, Cluster_obj) {
       if (as.numeric(as.character(Cluster_obj[[j, sink_res]])) == as.numeric(Df$Sink_node_clust[i])  &&
           as.numeric(as.character(Cluster_obj[[j, source_res]])) == as.numeric(Df$Assign_from_clust[i])) {
         #print(Seurat_obj@meta.data[j,source_res])
-        Cluster_obj[[j, source_res]] <- as.factor(Df$`Assign_to_clust`[i])
+        Cluster_obj[[j, source_res]] <-
+          as.factor(Df$`Assign_to_clust`[i])
       }
       
     }
@@ -93,19 +92,54 @@ change_assignment <- function(Df, Cluster_obj) {
   #TODO-> separate assignment into another function
 }
 
+check_cycle<- function(pruned_graph){
+  
+  delete_set_vertices <- vector('numeric')
+  ver_list <- V(pruned_graph)
+  #print(ver_list)
+  for (nodes in ver_list) {
+    adj_edge <- incident(pruned_graph, nodes, mode = "in")
+    #print(adj_edge)
+    #delete_set_edges <- c(delete_set_edges, adj_edge)
+      if (length(adj_edge)>1){
+          #print(as_ids(adj_edge[[1]]))
+          #str(adj_edge)
+          #print(nodes)
+          adj_ver<- adjacent_vertices(pruned_graph,nodes, mode="in")
+          adj_ver<- as_ids(adj_ver[[1]])
+          str(adj_ver)
+          remove_node<- sample(adj_ver,1)
+          print(remove_node)
+          
+          remove_edge <- incident(pruned_graph, remove_node, mode = "all")
+          print(remove_edge)
+          pruned_graph<- delete_edges(pruned_graph,remove_edge)
+          delete_set_vertices <- c(delete_set_vertices, remove_node)
+          #pruned_graph<-delete.vertices(pruned_graph,remove_node)
+          #print(as_tbl_graph(pruned_graph))
+          #  delete_set_edges <- c(delete_set_edges, adj_edge)
+          
+          #print(adj_ver[[1]][1])
+      }
+  }
+  pruned_graph<-delete.vertices(pruned_graph,delete_set_vertices)
+  #as_tbl_graph(pruned_graph)
+  
+}
+
 #Prune the tree so only core edges remain
 prune_tree <- function(graph_Df, cluster_df) {
   repeat {
     graph_Df <- graph_Df[!duplicated(names(graph_Df))]
     #print(graph_Df)
-    print( nrow(graph_Df[graph_Df$is_core == FALSE, ]))
+    print(nrow(graph_Df[graph_Df$is_core == FALSE,]))
     #No False edges acyclic tree
-    if (nrow(graph_Df[graph_Df$is_core == FALSE, ]) == 0)
+    if (nrow(graph_Df[graph_Df$is_core == FALSE,]) == 0)
       break
     
     #Apply function
     assign_df <-
-      check_alternate(graph_Df[graph_Df$is_core == FALSE, ], graph_Df[graph_Df$is_core == TRUE, ])
+      check_alternate(graph_Df[graph_Df$is_core == FALSE,], graph_Df[graph_Df$is_core == TRUE,])
     
     cluster_df <- change_assignment(assign_df, cluster_df)
     #print(cluster_df)
@@ -122,6 +156,8 @@ prune_tree <- function(graph_Df, cluster_df) {
     
     
   }
+  Graph<-check_cycle(Graph)
+  
   objList <-
     list("Cluster_obj" = cluster_df, "Clustree_obj" = Graph)
   #return (Graph)
@@ -170,7 +206,7 @@ collapse_tree <- function(Original_graph) {
   
   #}
   
-  ver_list <- ver_list[-delete_set_vertices, ]
+  ver_list <- ver_list[-delete_set_vertices,]
   #id <- rownames(ver_list)
   #ver_list <- cbind(name = id, ver_list)
   
@@ -198,8 +234,18 @@ checkIfNotTree <- function(cluster_df) {
 rename_clusters <- function(clusdata) {
   clusnames <- colnames(clusdata)
   clusnames <-
-    as.numeric(gsub("[^\\d]+\\.*[^\\d]", "", clusnames, perl = TRUE))
+    as.numeric(unlist(regmatches(
+      clusnames,
+      gregexpr(
+        "[[:digit:]]+\\.*[[:digit:]]*",
+        clusnames
+      )
+    )))
+  clusnames<- seq(length(colnames(clusdata)))
+  #as.numeric(gsub("[^\\d]+\\.*[^\\d]", "", clusnames, perl = TRUE))
   clusnames <- paste0("cluster", clusnames)
+  print(clusnames)
+  #colnames(clusdata) <- unique(clusnames[(order(clusnames))])
   colnames(clusdata) <- clusnames
   clusdata
 }
@@ -207,12 +253,18 @@ rename_clusters <- function(clusdata) {
 reassign_and_collapse <-
   function(cluster_df, count_matrix) {
     cluster_df <- rename_clusters(cluster_df)
-    clustree_graph<- clustree(cluster_df , prefix="cluster", prop_filter = 0, return = "graph")
+    clustree_graph <-
+      clustree(
+        cluster_df ,
+        prefix = "cluster",
+        prop_filter = 0,
+        return = "graph"
+      )
     graph_df <- as_long_data_frame(clustree_graph)
     
     #Get pruned tree with only true core edges
     
-    cluster_df <- rename_clusters(cluster_df)
+    #cluster_df <- rename_clusters(cluster_df)
     
     modified_obj <- prune_tree(graph_df, cluster_df)
     #Data Frame of modified tree
@@ -264,21 +316,21 @@ reassign_and_collapse <-
 
 
 
-
-
+#setwd("./Documents/RScripts/TreeSE/")
+load("pbmc_clustree.Rdata")
 ##pbmc example
-clusterdata<- pbmc@meta.data
-clusterdata<-clusterdata %>% 
+clusterdata <- pbmc@meta.data
+clusterdata <- clusterdata %>%
   select(starts_with("RNA_snn"))
 
-
+str(clusterdata)
 #Create PBMC object and graph
 #graph <- clustree(pbmc , prop_filter = 0, return = "graph")
 
 #Call func from here
 pbmc_TreeSE <-
   reassign_and_collapse(clusterdata, GetAssayData(pbmc))
-
+#str(GetAssayData(pbmc))
 
 #Save Object
 save(pbmc_TreeSE, file = "pbmc_TreeSE.Rdata")
@@ -295,13 +347,15 @@ icicle_plot <-
 
 
 # Identify the 10 most highly variable genes
-pbmc <- FindVariableFeatures(pbmc, selection.method = "vst", nfeatures = 2000)
+pbmc <-
+  FindVariableFeatures(pbmc, selection.method = "vst", nfeatures = 2000)
 #Generate Heatmap
 facetZoom <- app$get_ms_object(chart_id_or_object = icicle_plot)
 
 ms_list <- facetZoom$get_measurements()
 top100 <- head(VariableFeatures(pbmc), 100)
-subset_ms_list <- Filter(function(ms) ms@id %in% top100, ms_list)
+subset_ms_list <- Filter(function(ms)
+  ms@id %in% top100, ms_list)
 
 app$chart_mgr$visualize(chart_type = "HeatmapPlot", measurements = subset_ms_list)
 

@@ -1,0 +1,8 @@
+inst/doc
+doc
+Meta
+data/
+.RData
+.Rhistory
+.Rproj.user
+*.Rproj

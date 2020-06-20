@@ -1,0 +1,54 @@
+Package: scrnaviz
+Type: Package
+Title: Interactive visualization of Single-Cell RNA Seq Data
+Version: 0.1.0
+Author: Authors@R: c(
+    person("Hector", "Corrada Bravo",
+        email="hcorrada@gmail.com", role=c("cre","aut")), 
+        person("Jayaram",
+        "Kancherla", email="jayaram.kancherla@gmail.com",
+        role=c("aut")),
+        person("Jayaram",
+        "Kancherla", email="jayaram.kancherla@gmail.com",
+        role=c("aut")),
+        person("Kazi Tasnim",
+        "Zinat", email="kzintas@gmail.com",
+        role=c("aut"))
+    )
+Maintainer: Hector Corrada Bravo <hcorrada@gmail.com>
+Description: This package provides
+    More about what it does (maybe more than one line)
+    Use four spaces when indenting paragraphs within the Description.
+Depends:
+    R (>= 3.6),
+    clustree,
+    igraph,
+    tidygraph,
+    TreeSummarizedExperiment,
+    dplyr,
+    ggraph,
+    tidyr,
+    stringr,
+    metagenomeSeq,
+    msd16s,
+    S4Vectors,
+    metavizr
+Imports:
+    SingleCellExperiment
+Suggests:
+    knitr,
+    patchwork,
+    loomR,
+    scater,
+    devtools,
+    roxygen2,
+    Seurat (>= 3.0)
+Collate:
+    'reassign_and_collapse.R'
+License: MIT + file LICENSE
+URL: https://github.com/HCBravoLab/TreeSE
+Encoding: UTF-8
+LazyData: true
+biocViews: Visualization, Infrastructure, GUI, SCRNAseq
+RoxygenNote: 7.1.0
+VignetteBuilder: knitr

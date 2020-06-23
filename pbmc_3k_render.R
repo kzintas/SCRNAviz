@@ -178,7 +178,7 @@ collapse_tree <- function(Original_graph) {
   delete_set_vertices <- vector('numeric')
   
   #Vertex and edge lists of the graph from which we will construct the collapsed graph
-  ver_list <- as_data_frame(Original_graph, what = "vertices")
+  ver_list <- get.data.frame(Original_graph, what = "vertices")
   #edge_list <- as_data_frame(Original_graph, what = "edges")
   
   i <- length(layered_dist)
@@ -276,6 +276,9 @@ reassign_and_collapse <-
     clusters <-  modified_obj$Cluster_obj
     
     
+    plot(modified_graph, layout=layout_as_tree, vertex.size=4,
+         vertex.label.dist=1,  edge.arrow.size=0.5)
+    
     collapsed_graph <- collapse_tree(modified_graph)
     
     #collapsed_graph_df <- as_long_data_frame(collapsed_graph)
@@ -319,6 +322,17 @@ reassign_and_collapse <-
 #setwd("./Documents/RScripts/TreeSE/")
 load("pbmc_clustree.Rdata")
 ##pbmc example
+visualizeSeurat <-
+  function(Seurat_object){
+    clusterdata <- Seurat_object@meta.data
+    clusterdata <- clusterdata %>%
+      select(starts_with("RNA_snn"))
+    pbmc_TreeSE <-
+      reassign_and_collapse(clusterdata, GetAssayData(Seurat_object))
+    
+  }
+
+TreeSE<-visualizeSeurat(pbmc)
 clusterdata <- pbmc@meta.data
 clusterdata <- clusterdata %>%
   select(starts_with("RNA_snn"))
@@ -340,7 +354,7 @@ save(pbmc_TreeSE, file = "pbmc_TreeSE.Rdata")
 app <- startMetaviz()
 
 icicle_plot <-
-  app$plot(pbmc_TreeSE, datasource_name = "SCRNA", tree = "col")
+  app$plot(TreeSE, datasource_name = "SCRNA", tree = "col")
 
 #unscaled heatmap
 #heatmap <- app$chart_mgr$revisualize(chart_type = "HeatmapPlot", chart = icicle_plot)

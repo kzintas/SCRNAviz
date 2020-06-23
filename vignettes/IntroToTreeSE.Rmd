@@ -16,23 +16,33 @@ knitr::opts_chunk$set(
 )
 ```
 
+# Introduction
+
 [`TreeSE`](https://github.com/HCBravoLab/TreeSE) is a tool for interactive visualization and exploration of Single Cell RNA sequencing data. TreeSE provides a way for exploring clustered feature data hierarchically, 
 while supporting other useful data visualization charts like heatmaps.
 
-# Seurat example
+# Preprocessing
+
+Existing popular Single Cell packages can provide the necessary clustering information required to visualize the object. Here, we show the pipeline for using `TreeSE` with two widely used Single Cell RNA-seq packages, `Seurat` and `SingleCellExperiment`.
+
+## `Seurat` example
 
 To demonstrate the functionality we will work through a simple
-example using the `pbmc` dataset.
+example using the `pbmc` dataset. 
+
+### Pre-processing raw data and Finding CLusters
+
+First, we create a Seurat object, and run clustering at various resolutions (0-1.0)
 
 ```{r, eval=TRUE, echo=TRUE, results='hide', warning=FALSE, error=FALSE, message=FALSE}
 library(scrnaviz)
 library(dplyr)
 library(Seurat)
-library(patchwork)
 ```
 
+The following function converts the data tp Seurat object and finds clusters at distinct resolutions.
 ```{r}
-#Create PBMC and clustree
+#Download data from https://s3-us-west-2.amazonaws.com/10x.files/samples/cell/pbmc3k/pbmc3k_filtered_gene_bc_matrices.tar.gz
 runSeurat<- function(datadir){
   pbmc.data <- Read10X(data.dir = datadir)
   pbmc <- CreateSeuratObject(counts = pbmc.data, min.cells = 3, min.features = 200,
@@ -50,6 +60,10 @@ runSeurat<- function(datadir){
 }
 ```
 
+
+### Filtering out the Cluster Information
+
+Once we have the clusters, we get the clusterdata from the Seurat object metadata and select only the columns that provide us clustering information. This step gives us the dataframe with relevant cluster information.
 ```{r, eval=TRUE, echo=TRUE, results='hide', warning=FALSE, error=FALSE, message=FALSE}
 #Run SEURAT
 pbmc<- runSeurat("../data/filtered_gene_bc_matrices/hg19/")
@@ -58,9 +72,136 @@ clusterdata <- pbmc@meta.data
 clusterdata <- clusterdata %>%
   select(starts_with("RNA_snn"))
 ```
-```{r, eval=TRUE, echo=TRUE, results='hide', warning=FALSE, error=FALSE, message=FALSE}
-pbmc_TreeSE <-
-  reassign_and_collapse(clusterdata, GetAssayData(pbmc))
-#app <- startMetaviz()
+### Getting the most variable genes
+
+For HeatMap visualization, we first extract the top 100 most variable genes from the  2700 samples.
+```{r, eval=TRUE, echo=TRUE}
+pbmc <-
+  FindVariableFeatures(pbmc, selection.method = "vst", nfeatures = 2000)
+
+top100 <- head(VariableFeatures(pbmc), 100)
+
 ```
 
+### Get the Tree Summarized Experiment bject to be visualized
+
+Now, we provide 'TreeSE' class with the cluster dataframe and associated count matrix. In return we get the 'TreeSe' result ready for visualization.
+```{r, eval=TRUE, echo=TRUE,  warning=FALSE, error=FALSE, message=FALSE}
+TreeSE <-
+  reassign_and_collapse(clusterdata, GetAssayData(pbmc))
+head(TreeSE)
+```
+
+
+## `SingleCellExperiment` Example
+
+To demonstrate the functionality we will work through the `Mouse mebryonic stem cells`  dataset available via `scRNAseq` package, which provides access to a collection of public scRNA-seq dasets in the form of `SingleCellExperiment` object. 
+
+
+```{r, eval=TRUE, echo=TRUE, results='hide', warning=FALSE, error=FALSE, message=FALSE}
+library(scRNAseq)
+library(SC3)
+library(scran)
+library(scater)
+```
+
+The following code generates the `SingleCellExperiment` object.
+
+```{r, eval=TRUE, echo=TRUE, results='hide', warning=FALSE, error=FALSE, message=FALSE}
+
+sce<- KolodziejczykESCData()
+
+# Normalization.
+sce <- logNormCounts(sce)
+
+
+# define feature names in feature_symbol column
+rowData(sce)$feature_symbol <- rownames(sce)
+# remove features with duplicated names
+sce <- sce[!duplicated(rowData(sce)$feature_symbol), ]
+
+# Dimensionality reduction.
+
+sce <- runPCA(sce)
+
+```
+
+### Creating clusters
+
+We then create clusters at different resolutions using the `SC3` package.
+
+```{r, eval=TRUE, echo=TRUE, results='hide', warning=FALSE, error=FALSE, message=FALSE}
+counts(sce) <- as.matrix(counts(sce))
+#normcounts(sce) <- as.matrix(normcounts(sce))
+logcounts(sce) <- as.matrix(logcounts(sce))
+#sce <- sc3_kmeans(sce, ks = 1:10)
+sce <- sc3(sce, ks = 1:10)
+```
+
+### Filtering out the Cluster Information
+
+Once we have the clusters, we get the clusterdata from the Seurat object metadata and select only the columns that provide us clustering information. This step gives us the dataframe with relevant cluster information.
+
+```{r, eval=TRUE, echo=TRUE, results='hide', warning=FALSE, error=FALSE, message=FALSE}
+
+#as.vector(counts(sce))
+col_data <- colData(sce)
+col_data <- col_data[ , grep("sc3_", colnames(col_data))]
+```
+
+### Getting the most variable genes
+
+For HeatMap visualization, we first extract the top 100 most variable genes from the   samples.
+```{r, eval=TRUE, echo=TRUE}
+dec.sce <- modelGeneVar(sce)
+top100 <- getTopHVGs(dec.sce, n=100)
+
+```
+
+##Get the Tree Summarized Experiment bject to be visualized
+
+Now, we provide 'TreeSE' class with the cluster dataframe and associated count matrix. In return we get the 'TreeSe' result ready for visualization.
+```{r, eval=TRUE, echo=TRUE,  warning=FALSE, error=FALSE, message=FALSE}
+count<-as(counts(sce), "dgCMatrix")
+rownames(count)<-rownames(counts(sce))
+
+TreeSE <-reassign_and_collapse(as.data.frame(col_data@listData), count)
+
+head(TreeSE)
+```
+
+# Interactive visualization
+
+### The metavizr session manager
+
+In the next step, we visualize the interactive tree via 'Metaviz' app, by calling `startMetaviz` function.
+```{r, eval=FALSE, echo=TRUE}
+app <- startMetaviz()
+```
+
+This opens a websocket connection between the interactive `R` session and the browser client. This will allow us to visualize data stored in the `Metaviz` server along with data in the interactive `R` session.
+
+### Plotting the data
+
+By calling the following plot function we plot the 'TreeSE' object via Metaviz
+```{r, eval=FALSE, echo=TRUE}
+icicle_plot <-
+  app$plot(TreeSE, datasource_name = "SCRNA", tree = "col")
+```
+### Visualizing the heatMap
+
+
+We then get the relevant object list from icicle plot and based on the count matrix from plot, subset the 100 most variable genes
+```{r, eval=FALSE, echo=TRUE}
+facetZoom <- app$get_ms_object(chart_id_or_object = icicle_plot)
+# Get Measurements from the plot
+ms_list <- facetZoom$get_measurements()
+subset_ms_list <- Filter(function(ms)
+  ms@id %in% top100, ms_list)
+```
+#### Visualization via Metaviz
+
+The following command adds a HeatMap plot in the browser.
+```{r, eval=FALSE, echo=TRUE}
+app$chart_mgr$visualize(chart_type = "HeatmapPlot", measurements = subset_ms_list)
+```

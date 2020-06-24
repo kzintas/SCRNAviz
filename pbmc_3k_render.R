@@ -17,7 +17,6 @@ library(scater)
 # install loomR from GitHub using the remotes package remotes::install_github(repo =
 # 'mojaveazure/loomR', ref = 'develop')
 library(loomR)
-library(patchwork)
 library(scRNAseq)
 library(SC3)
 library(scran)
@@ -325,12 +324,28 @@ load("pbmc_clustree.Rdata")
 visualizeSeurat <-
   function(Seurat_object){
     clusterdata <- Seurat_object@meta.data
-    clusterdata <- clusterdata %>%
-      select(starts_with("RNA_snn"))
+    #print(colnames(clusterdata))
+    clusterdata <- clusterdata[ , grep("*snn*", colnames(clusterdata))]
+    #print(colnames(clusterdata))
     pbmc_TreeSE <-
       reassign_and_collapse(clusterdata, GetAssayData(Seurat_object))
     
   }
+
+visualizeSingleCellExperiment <-
+  function(Sce_object){
+    clusterdata <- colData(Sce_object)
+    colnames(clusterdata)
+    clusterdata <- clusterdata[ , grep("sc3_", colnames(clusterdata))]
+    
+    count<-as(counts(Sce_object), "dgCMatrix")
+    rownames(count)<-rownames(counts(Sce_object))
+    
+    TreeSE <-reassign_and_collapse(as.data.frame(clusterdata@listData), count)
+    
+    
+  }
+
 
 TreeSE<-visualizeSeurat(pbmc)
 clusterdata <- pbmc@meta.data

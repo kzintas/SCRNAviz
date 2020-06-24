@@ -318,9 +318,6 @@ reassign_and_collapse <-
 
 
 
-#setwd("./Documents/RScripts/TreeSE/")
-load("pbmc_clustree.Rdata")
-##pbmc example
 visualizeSeurat <-
   function(Seurat_object){
     clusterdata <- Seurat_object@meta.data
@@ -336,7 +333,7 @@ visualizeSingleCellExperiment <-
   function(Sce_object){
     clusterdata <- colData(Sce_object)
     colnames(clusterdata)
-    clusterdata <- clusterdata[ , grep("sc3_", colnames(clusterdata))]
+    clusterdata <- clusterdata[ , grep("cluster", colnames(clusterdata))]
     
     count<-as(counts(Sce_object), "dgCMatrix")
     rownames(count)<-rownames(counts(Sce_object))
@@ -347,7 +344,20 @@ visualizeSingleCellExperiment <-
   }
 
 
+#setwd("./Documents/RScripts/TreeSE/")
+load("pbmc_clustree.Rdata")
+##pbmc example
 TreeSE<-visualizeSeurat(pbmc)
+as.data.table(colData(TreeSE))
+rownames(TreeSE)
+
+find_top_variable_genes<- function(treeseobject, n){
+  dec.Tree_SE <- modelGeneVar(assays(treeseobject)$counts)
+  top100 <- getTopHVGs(dec.Tree_SE, n)
+}
+
+
+
 clusterdata <- pbmc@meta.data
 clusterdata <- clusterdata %>%
   select(starts_with("RNA_snn"))

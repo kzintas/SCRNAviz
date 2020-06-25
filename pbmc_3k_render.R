@@ -316,6 +316,21 @@ reassign_and_collapse <-
     
   }
 
+check_unique_parent<-function(clusterdata){
+  for(i in seq(2,ncol(clusterdata))){
+    m<-unique(clusterdata[[i]])
+    for(values in m){
+      subsetted_list<- clusterdata%>%
+        filter(.data[[colnames(clusterdata)[[i]]]]==values)
+      parent<- length(unique(subsetted_list[[i-1]]))
+      if(parent>1){
+        stop("Not a tree, some nodes with multiple parents in level", i)
+      }
+      #cat(nrow(subsetted_list)," ",parent, "\n")
+    }
+  }
+}
+
 
 simplified_treese <-
   function(cluster_df, count_matrix) {
@@ -327,6 +342,7 @@ simplified_treese <-
         paste(clusnames, clusters[[clusnames]], sep = 'C')
     }
     
+    check_unique_parent(clusters)
     samples <- rownames(clusters)
     clusters <- cbind(clusters, samples)
     
@@ -335,8 +351,8 @@ simplified_treese <-
     #print(clusters)
     
     tree <- TreeIndex(clusters)
-    str(tree)
-    View(tree)
+    #str(tree)
+    #View(tree)
     rownames(tree) <- rownames(clusters)
     
     TreeSE_obj <-
@@ -379,16 +395,20 @@ find_top_variable_genes<- function(treeseobject, number){
 }
 
 
+#setwd("./Documents/RScripts/TreeSE/")
+load("pbmc_clustree.Rdata")
+##pbmc example
+TreeSE<-visualizeSeurat(pbmc)
+clusterdata <- pbmc@meta.data
+clusterdata <- clusterdata %>%
+  select(starts_with("RNA_snn"))
+
 dummy_tree<-simplified_treese(clusterdata, GetAssayData(pbmc))
 app <- startMetaviz()
 
 icicle_plot <-
   app$plot(dummy_tree, datasource_name = "SCRNA", tree = "col")
 
-#setwd("./Documents/RScripts/TreeSE/")
-load("pbmc_clustree.Rdata")
-##pbmc example
-TreeSE<-visualizeSeurat(pbmc)
 str(TreeSE)
 as.data.table(colData(TreeSE))
 rownames(TreeSE)

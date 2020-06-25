@@ -317,6 +317,33 @@ reassign_and_collapse <-
   }
 
 
+simplified_treese <-
+  function(cluster_df, count_matrix) {
+    cluster_df <- rename_clusters(cluster_df)
+    clusters <- cluster_df
+    
+    for (clusnames in names(clusters)) {
+      clusters[[clusnames]] <-
+        paste(clusnames, clusters[[clusnames]], sep = 'C')
+    }
+    
+    samples <- rownames(clusters)
+    clusters <- cbind(clusters, samples)
+    
+    clusters <- checkIfNotTree(clusters)
+    
+    #print(clusters)
+    
+    tree <- TreeIndex(clusters)
+    str(tree)
+    View(tree)
+    rownames(tree) <- rownames(clusters)
+    
+    TreeSE_obj <-
+      TreeSummarizedExperiment(SimpleList(counts = count_matrix), colData = tree)
+    
+  }
+
 
 visualizeSeurat <-
   function(Seurat_object){
@@ -344,19 +371,30 @@ visualizeSingleCellExperiment <-
   }
 
 
+find_top_variable_genes<- function(treeseobject, number){
+  dec.Tree_SE <- modelGeneVar(assays(treeseobject)$counts)
+  top100 <- getTopHVGs(dec.Tree_SE, n=number)
+  treeseobject@metadata[['top_variable']]<- top100
+  treeseobject
+}
+
+
+dummy_tree<-simplified_treese(clusterdata, GetAssayData(pbmc))
+app <- startMetaviz()
+
+icicle_plot <-
+  app$plot(dummy_tree, datasource_name = "SCRNA", tree = "col")
+
 #setwd("./Documents/RScripts/TreeSE/")
 load("pbmc_clustree.Rdata")
 ##pbmc example
 TreeSE<-visualizeSeurat(pbmc)
+str(TreeSE)
 as.data.table(colData(TreeSE))
 rownames(TreeSE)
 
-find_top_variable_genes<- function(treeseobject, n){
-  dec.Tree_SE <- modelGeneVar(assays(treeseobject)$counts)
-  top100 <- getTopHVGs(dec.Tree_SE, n)
-}
-
-
+TreeSE<-find_top_variable_genes(TreeSE,100)
+metadata(TreeSE)$top_variable
 
 clusterdata <- pbmc@meta.data
 clusterdata <- clusterdata %>%
@@ -396,6 +434,10 @@ top100 <- head(VariableFeatures(pbmc), 100)
 subset_ms_list <- Filter(function(ms)
   ms@id %in% top100, ms_list)
 
+subset_ms_list <- Filter(function(ms)
+  ms@id %in% metadata(TreeSE)$top_variable, ms_list)
+
+#metadata(TreeSE)$top_variable
 app$chart_mgr$visualize(chart_type = "HeatmapPlot", measurements = subset_ms_list)
 
 #Stop app and check if stopped
@@ -408,3 +450,4 @@ aggr <- aggregateTree(pbmc_TreeSE, selectedLevel = 3, by = "col")
 
 icicle_plot <-
   app$plot(aggr, datasource_name = "SCRNA", tree = "col")
+s

@@ -21,6 +21,7 @@ library(scRNAseq)
 library(SC3)
 library(scran)
 library(scater)
+library(Rtsne)
 
 
 #function for checking alternate core edge

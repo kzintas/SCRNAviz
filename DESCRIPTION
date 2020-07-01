@@ -32,7 +32,8 @@ Depends:
     msd16s,
     S4Vectors,
     metavizr,
-    scran
+    scran,
+    ggplot2
 Imports:
     SingleCellExperiment
 Suggests:

@@ -164,11 +164,38 @@ collapse_tree <- function(original_graph) {
 
 
   ver_list <- ver_list[-delete_set_vertices,]
-  print(ver_list)
+  #print(ver_list)
   return(ver_list)
 }
 
 
+
+
+plot_tree <-
+  function(hierarchydf) {
+    print("abc")
+    hierarchydf <-
+      hierarchydf[,!colnames(hierarchydf) %in% c("samples", "otu_index")]
+
+    df <- data.frame(from = numeric(), to = numeric())
+    for (i in seq(ncol(hierarchydf) - 1)) {
+      edges <- hierarchydf %>%
+        dplyr::rename(from = colnames(hierarchydf)[i],
+               to = colnames(hierarchydf)[i + 1]) %>%
+        select(i, i + 1) %>%
+        unique
+
+      df <- rbind(df, edges)
+    }
+
+    mygraph <- graph_from_data_frame(df)
+    plot(mygraph, layout=layout_as_tree, vertex.size=4,
+         vertex.label.dist=1,  edge.arrow.size=0.5)
+    #print(mygraph)
+  #  ggraph::ggraph(mygraph, layout = 'dendrogram', circular = FALSE) +
+  #    ggraph::geom_edge_diagonal() +
+  #    ggraph::geom_node_point(show.legend=TRUE)
+  }
 
 checkIfNotTree <- function(cluster_df) {
   #Handle Forests
@@ -247,6 +274,9 @@ simplified_treese <-
 
     TreeSE_obj <-
       TreeSummarizedExperiment(SimpleList(counts = count_matrix), colData = tree)
+    plot_tree(TreeSE_obj@colData@hierarchy_tree)
+    TreeSE_obj
+
 
   }
 
@@ -310,6 +340,8 @@ reassign_and_collapse <-
 
     TreeSE_obj <-
       TreeSummarizedExperiment(SimpleList(counts = count_matrix), colData = tree)
+    plot_tree(TreeSE_obj@colData@hierarchy_tree)
+    TreeSE_obj
 
   }
 

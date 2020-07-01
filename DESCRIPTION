@@ -29,18 +29,18 @@ Depends:
     ggraph,
     tidyr,
     stringr,
-    metagenomeSeq,
     msd16s,
     S4Vectors,
-    metavizr
+    metavizr,
+    scran
 Imports:
     SingleCellExperiment
 Suggests:
     knitr,
-    patchwork,
     loomR,
     scater,
     devtools,
+    sc3,
     roxygen2,
     Seurat (>= 3.0)
 Collate:

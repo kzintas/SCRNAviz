@@ -21,6 +21,19 @@ knitr::opts_chunk$set(
 [`TreeSE`](https://github.com/HCBravoLab/TreeSE) is a tool for interactive visualization and exploration of Single Cell RNA sequencing data. TreeSE provides a way for exploring clustered feature data hierarchically, 
 while supporting other useful data visualization charts like heatmaps.
 
+# Simple Example
+
+Given a `DataFrame` with cluster information, and a count matrix, a `TreeSE` object is generated the following way
+```{r, eval=TRUE, echo=TRUE, results='hide', warning=FALSE, error=FALSE, message=FALSE}
+n=64
+df<- data.frame(cluster0=rep(1,n))
+for(i in seq(1,5)){
+  df[[paste0("cluster",i)]]<- rep(seq(1:(2**i)),each=ceiling(n/(2**i)),len=n)
+}
+counts <- matrix(rpois(6400, lambda = 10), ncol=n, nrow=100)
+TreeSE<-simplified_treese(df,counts)
+```
+
 # Preprocessing
 
 Existing popular Single Cell packages can provide the necessary clustering information required to visualize the object. Here, we show the pipeline for using `TreeSE` with two widely used Single Cell RNA-seq packages, `Seurat` and `SingleCellExperiment`.
@@ -103,7 +116,7 @@ The following code generates the `SingleCellExperiment` object.
 
 ```{r, eval=TRUE, echo=TRUE, results='hide', warning=FALSE, error=FALSE, message=FALSE}
 
-sce<- KolodziejczykESCData()
+sce<- mockSCE()
 
 # Normalization.
 sce <- logNormCounts(sce)

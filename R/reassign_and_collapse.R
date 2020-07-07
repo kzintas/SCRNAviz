@@ -372,6 +372,13 @@ visualizeSeurat <-
     #print(colnames(clusterdata))
     pbmc_TreeSE <-
       reassign_and_collapse(clusterdata, GetAssayData(Seurat_object))
+    if("tsne" %in% Reductions(Seurat_object)){
+      reducdim<-Reductions(Seurat_object,slot = "tsne")
+      TreeSE@metadata[['tsne']]<-reducdim@cell.embeddings
+    }
+    TreeSE
+
+
 
   }
 

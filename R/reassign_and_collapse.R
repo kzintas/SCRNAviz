@@ -389,7 +389,7 @@ visualizeSingleCellExperiment <-
   function(Sce_object) {
     clusterdata <- colData(Sce_object)
     #colnames(clusterdata)
-    clusterdata <- clusterdata[ , grep("sc3_", colnames(clusterdata))]
+    clusterdata <- clusterdata[ , grep("(cluster|sc3)_", colnames(clusterdata),ignore.case = TRUE)]
     #clusterdata <-
     #  clusterdata[, grep("cluster", colnames(clusterdata))]
     count <- counts(Sce_object)
@@ -397,6 +397,11 @@ visualizeSingleCellExperiment <-
 
     TreeSE <-
       reassign_and_collapse(as.data.frame(clusterdata@listData), count)
+
+    if ("TSNE" %in% reducedDimNames(Sce_object)){
+      TreeSE@metadata[['tsne']]<-reducedDims(Sce_object)$"TSNE"
+    }
+    TreeSE
 
 
   }

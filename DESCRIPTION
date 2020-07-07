@@ -24,14 +24,13 @@ Depends:
     clustree,
     igraph,
     tidygraph,
-    TreeSummarizedExperiment,
+    TreeViz,
     dplyr,
     ggraph,
     tidyr,
     stringr,
     msd16s,
     S4Vectors,
-    metavizr,
     scran,
     ggplot2
 Imports:
@@ -51,5 +50,5 @@ URL: https://github.com/HCBravoLab/TreeSE
 Encoding: UTF-8
 LazyData: true
 biocViews: Visualization, Infrastructure, GUI, SCRNAseq
-RoxygenNote: 7.1.0
+RoxygenNote: 7.1.1
 VignetteBuilder: knitr

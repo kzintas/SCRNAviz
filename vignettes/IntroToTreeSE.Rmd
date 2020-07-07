@@ -158,7 +158,7 @@ for(i in  seq(10)){
 
 Once we have the clusters, we get the clusterdata from the Seurat object metadata and select only the columns that provide us clustering information. This step gives us the dataframe with relevant cluster information.
 
-```{r, eval=TRUE, echo=TRUE, results='hide', warning=FALSE, error=FALSE, message=FALSE}
+```{r, eval=FALSE, echo=TRUE, results='hide', warning=FALSE, error=FALSE, message=FALSE}
 
 #as.vector(counts(sce))
 col_data <- colData(sce)
@@ -207,7 +207,7 @@ facetZoom <- app$get_ms_object(chart_id_or_object = icicle_plot)
 # Get Measurements from the plot
 ms_list <- facetZoom$get_measurements()
 subset_ms_list <- Filter(function(ms)
-  ms@id %in% top100, ms_list)
+  ms@id %in% metadata(TreeSE)$top_variable, ms_list)
 ```
 ### Visualization via Metaviz
 

@@ -88,14 +88,14 @@ check_cycle <- function(pruned_graph) {
 
 prune_tree <- function(graph_Df, cluster_df) {
   #Prune the tree so only core edges remain
-  print("Remove not core edges")
+  #print("Remove not core edges")
   repeat {
     #drop duplicated columns (Throws error otherwise)
 
     graph_Df <- graph_Df[!duplicated(names(graph_Df))]
 
     #See number of core edges at each ites
-    print(nrow(graph_Df[graph_Df$is_core == FALSE,]))
+    #print(nrow(graph_Df[graph_Df$is_core == FALSE,]))
     #No False edges acyclic tree
     if (nrow(graph_Df[graph_Df$is_core == FALSE,]) == 0)
       break
@@ -173,7 +173,7 @@ collapse_tree <- function(original_graph) {
 
 plot_tree <-
   function(hierarchydf) {
-    print("abc")
+    #print("abc")
     hierarchydf <-
       hierarchydf[,!colnames(hierarchydf) %in% c("samples", "otu_index")]
 
@@ -189,8 +189,15 @@ plot_tree <-
     }
 
     mygraph <- graph_from_data_frame(df)
-    plot(mygraph, layout=layout_as_tree, vertex.size=4,
-         vertex.label.dist=1,  edge.arrow.size=0.5)
+    # plot(mygraph, layout=layout_as_tree, vertex.size=4,
+    #     vertex.label.dist=1,  edge.arrow.size=0.5)
+
+    fig<-ggraph(mygraph, layout = 'dendrogram', circular = FALSE) +
+      ggraph::geom_edge_diagonal() +
+      ggraph::geom_node_point(show.legend = TRUE) +
+      ggraph::geom_node_label(aes(label = substring(V(mygraph)$name,8)))+
+      theme_void()
+    show(fig)
     #print(mygraph)
   #  ggraph::ggraph(mygraph, layout = 'dendrogram', circular = FALSE) +
   #    ggraph::geom_edge_diagonal() +
@@ -273,7 +280,7 @@ simplified_treese <-
     rownames(tree) <- rownames(clusters)
 
     TreeSE_obj <-
-      TreeSummarizedExperiment(SimpleList(counts = count_matrix), colData = tree)
+      TreeViz(SimpleList(counts = count_matrix), colData = tree)
     plot_tree(TreeSE_obj@colData@hierarchy_tree)
     TreeSE_obj
 
@@ -339,7 +346,7 @@ reassign_and_collapse <-
     rownames(tree) <- rownames(clusters)
 
     TreeSE_obj <-
-      TreeSummarizedExperiment(SimpleList(counts = count_matrix), colData = tree)
+      TreeViz(SimpleList(counts = count_matrix), colData = tree)
     plot_tree(TreeSE_obj@colData@hierarchy_tree)
     TreeSE_obj
 
@@ -382,9 +389,9 @@ visualizeSingleCellExperiment <-
   function(Sce_object) {
     clusterdata <- colData(Sce_object)
     #colnames(clusterdata)
-    #clusterdata <- clusterdata[ , grep("sc3_", colnames(clusterdata))]
-    clusterdata <-
-      clusterdata[, grep("cluster", colnames(clusterdata))]
+    clusterdata <- clusterdata[ , grep("sc3_", colnames(clusterdata))]
+    #clusterdata <-
+    #  clusterdata[, grep("cluster", colnames(clusterdata))]
     count <- counts(Sce_object)
     rownames(count) <- rownames(counts(Sce_object))
 
